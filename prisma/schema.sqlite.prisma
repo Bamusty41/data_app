@@ -1,0 +1,81 @@
+// Prisma Schema for SQLite local test environment
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id                   String        @id @default(uuid())
+  full_name            String        @map("full_name")
+  email                String        @unique
+  phone                String        @unique
+  password_hash        String        @map("password_hash")
+  transaction_pin_hash String        @map("transaction_pin_hash")
+  biometric_enabled    Boolean       @default(false) @map("biometric_enabled")
+  status               String        @default("ACTIVE")
+  created_at           DateTime      @default(now()) @map("created_at")
+  updated_at           DateTime      @updatedAt @map("updated_at")
+
+  wallet               Wallet?
+  transactions         Transaction[]
+
+  @@map("users")
+}
+
+model Wallet {
+  id                     String        @id @default(uuid())
+  user_id                String        @unique @map("user_id")
+  balance                Float         @default(0.00)
+  virtual_account_number String?       @map("virtual_account_number")
+  virtual_bank_name      String?       @map("virtual_bank_name")
+  virtual_account_name   String?       @map("virtual_account_name")
+  created_at             DateTime      @default(now()) @map("created_at")
+  updated_at             DateTime      @updatedAt @map("updated_at")
+
+  user                   User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  ledger_entries         LedgerEntry[]
+
+  @@map("wallets")
+}
+
+model LedgerEntry {
+  id             String   @id @default(uuid())
+  wallet_id      String   @map("wallet_id")
+  type           String
+  amount         Float
+  balance_before Float    @map("balance_before")
+  balance_after  Float    @map("balance_after")
+  reference      String   @unique
+  description    String
+  created_at     DateTime @default(now()) @map("created_at")
+
+  wallet         Wallet   @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
+
+  @@map("ledger_entries")
+}
+
+model Transaction {
+  id                 String   @id @default(uuid())
+  user_id            String   @map("user_id")
+  reference          String   @unique
+  service_type       String   @map("service_type")
+  network            String
+  phone_number       String   @map("phone_number")
+  plan_id            String?  @map("plan_id")
+  amount             Float
+  provider_used      String   @map("provider_used")
+  provider_reference String?  @map("provider_reference")
+  status             String   @default("PENDING")
+  retries_count      Int      @default(0) @map("retries_count")
+  created_at         DateTime @default(now()) @map("created_at")
+  updated_at         DateTime @updatedAt @map("updated_at")
+
+  user               User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
