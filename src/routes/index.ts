@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { UserController } from '../controllers/userController';
 import { WalletController } from '../controllers/walletController';
 import { VTUController } from '../controllers/vtuController';
+import webhookRouter from './webhookRoutes';
 
 const router = Router();
 
@@ -19,5 +20,8 @@ router.get('/wallets/:walletId/ledger', WalletController.getLedgerHistory);
 router.post('/vtu/purchase', VTUController.purchaseAirtimeOrData);
 router.get('/transactions/reference/:reference', VTUController.getTransaction);
 router.get('/transactions/user/:userId', VTUController.getUserHistory);
+
+// Webhook Routes
+router.use('/webhooks', webhookRouter);
 
 export default router;
