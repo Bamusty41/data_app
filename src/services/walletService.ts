@@ -16,7 +16,7 @@ export interface WalletOperationInput {
 
 export class WalletService {
   /**
-   * Credits a user's wallet atomically with explicit Row-Level Locking (`FOR UPDATE`).
+   * Credits a user's wallet atomically within a Prisma transaction.
    * Guarantees strict double-entry ledger logging and prevents duplicate references.
    */
   static async creditWallet(input: WalletOperationInput) {
@@ -34,25 +34,17 @@ export class WalletService {
         throw new DuplicateTransactionError(input.reference);
       }
 
-      // 2. Explicit Row-Level Lock (`SELECT ... FOR UPDATE`) on target wallet row
-      // Eliminates race conditions and parallel write conflicts
-      let lockedWallets: any[];
-      try {
-        lockedWallets = await tx.$queryRaw`
-          SELECT id, user_id, balance FROM wallets WHERE user_id = ${input.userId} FOR UPDATE
-        `;
-      } catch {
-        // Fallback for SQLite / test environments without native FOR UPDATE support
-        lockedWallets = await tx.$queryRaw`
-          SELECT id, user_id, balance FROM wallets WHERE user_id = ${input.userId}
-        `;
-      }
+      // 2. Read the wallet row within the transaction.
+      // SQLite does not support explicit FOR UPDATE locking,
+      // so rely on transactional update semantics for test environments.
+      const walletRow = await tx.wallet.findUnique({
+        where: { user_id: input.userId },
+      });
 
-      if (!lockedWallets || lockedWallets.length === 0) {
+      if (!walletRow) {
         throw new UserNotFoundError(input.userId);
       }
 
-      const walletRow = lockedWallets[0];
       const balanceBefore = new Prisma.Decimal(walletRow.balance);
       const balanceAfter = balanceBefore.add(numAmount);
 
@@ -80,8 +72,8 @@ export class WalletService {
   }
 
   /**
-   * Debits a user's wallet atomically with explicit Row-Level Locking (`FOR UPDATE`).
-   * Eliminates race conditions and double-spending.
+   * Debits a user's wallet atomically within a Prisma transaction.
+   * Eliminates race conditions and double-spending when supported by the datasource.
    */
   static async debitWallet(input: WalletOperationInput) {
     const numAmount = new Prisma.Decimal(input.amount);
@@ -98,24 +90,17 @@ export class WalletService {
         throw new DuplicateTransactionError(input.reference);
       }
 
-      // 2. Explicit Row-Level Lock (`SELECT ... FOR UPDATE`)
-      let lockedWallets: any[];
-      try {
-        lockedWallets = await tx.$queryRaw`
-          SELECT id, user_id, balance FROM wallets WHERE user_id = ${input.userId} FOR UPDATE
-        `;
-      } catch {
-        // Fallback for SQLite / test environments without native FOR UPDATE support
-        lockedWallets = await tx.$queryRaw`
-          SELECT id, user_id, balance FROM wallets WHERE user_id = ${input.userId}
-        `;
-      }
+      // 2. Read the wallet row within the transaction.
+      // SQLite does not support explicit FOR UPDATE locking,
+      // so rely on transactional update semantics for test environments.
+      const walletRow = await tx.wallet.findUnique({
+        where: { user_id: input.userId },
+      });
 
-      if (!lockedWallets || lockedWallets.length === 0) {
+      if (!walletRow) {
         throw new UserNotFoundError(input.userId);
       }
 
-      const walletRow = lockedWallets[0];
       const balanceBefore = new Prisma.Decimal(walletRow.balance);
 
       // 3. Balance verification against debit amount

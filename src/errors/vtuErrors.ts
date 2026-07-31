@@ -46,3 +46,11 @@ export class UserNotFoundError extends BaseDomainError {
     super(`User with ID '${userId}' not found`, 404, 'USER_NOT_FOUND', { userId });
   }
 }
+
+export class ProviderError extends BaseDomainError {
+  public provider: string;
+  constructor(message: string, provider: string, details?: any) {
+    super(message, 502, 'PROVIDER_ERROR', details);
+    this.provider = provider;
+  }
+}

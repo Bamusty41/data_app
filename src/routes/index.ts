@@ -3,6 +3,7 @@ import { UserController } from '../controllers/userController';
 import { WalletController } from '../controllers/walletController';
 import { VTUController } from '../controllers/vtuController';
 import webhookRouter from './webhookRoutes';
+import adminRouter from './adminRoutes';
 
 const router = Router();
 
@@ -18,8 +19,12 @@ router.get('/wallets/:walletId/ledger', WalletController.getLedgerHistory);
 
 // VTU & Transaction Routes
 router.post('/vtu/purchase', VTUController.purchaseAirtimeOrData);
+router.get('/vtu/balances', VTUController.getProviderBalances);
 router.get('/transactions/reference/:reference', VTUController.getTransaction);
 router.get('/transactions/user/:userId', VTUController.getUserHistory);
+
+// Admin Routes
+router.use('/admin', adminRouter);
 
 // Webhook Routes
 router.use('/webhooks', webhookRouter);

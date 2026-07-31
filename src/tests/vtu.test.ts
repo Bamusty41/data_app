@@ -99,7 +99,7 @@ export async function runVTUTests() {
       serviceType: ServiceType.DATA,
       network: Network.AIRTEL,
       phoneNumber: '08029876543',
-      planId: 'AIRTEL-2GB-MONTHLY',
+      planId: '1.5GB',
       amount: 2500.00,
       preferredProvider: Provider.HUSMODATA,
     });
@@ -139,12 +139,14 @@ export async function runVTUTests() {
     console.log('\n🎉 ALL VTU PLATFORM SERVICE LAYER TESTS PASSED SUCCESSFULLY!');
   } catch (error: any) {
     console.error('\n❌ Test Suite Failed:', error);
-    process.exit(1);
+    throw error;
   } finally {
     await prisma.$disconnect();
   }
 }
 
-if (require.main === module) {
-  runVTUTests();
-}
+describe('VTU Platform Verification Suite', () => {
+  test('executes the end-to-end VTU verification scenarios', async () => {
+    await runVTUTests();
+  });
+});

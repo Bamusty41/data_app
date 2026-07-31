@@ -121,12 +121,14 @@ export async function runStrowalletWebhookTests() {
     console.log('\n🎉 ALL STROWALLET WEBHOOK & ROW LOCKING TESTS PASSED!');
   } catch (error: any) {
     console.error('\n❌ Strowallet Webhook Test Suite Failed:', error);
-    process.exit(1);
+    throw error;
   } finally {
     await prisma.$disconnect();
   }
 }
 
-if (require.main === module) {
-  runStrowalletWebhookTests();
-}
+describe('Strowallet Webhook Integration Suite', () => {
+  test('executes the Strowallet webhook lifecycle scenarios', async () => {
+    await runStrowalletWebhookTests();
+  });
+});

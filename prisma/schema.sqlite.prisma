@@ -1,4 +1,5 @@
 // Prisma Schema for SQLite local test environment
+// Mirrors the production schema while using SQLite as the datasource provider.
 
 generator client {
   provider = "prisma-client-js"
@@ -6,7 +7,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  url      = env("TEST_DATABASE_URL")
 }
 
 model User {
@@ -30,7 +31,7 @@ model User {
 model Wallet {
   id                     String        @id @default(uuid())
   user_id                String        @unique @map("user_id")
-  balance                Float         @default(0.00)
+  balance                Decimal       @default(0.00)
   virtual_account_number String?       @map("virtual_account_number")
   virtual_bank_name      String?       @map("virtual_bank_name")
   virtual_account_name   String?       @map("virtual_account_name")
@@ -47,9 +48,9 @@ model LedgerEntry {
   id             String   @id @default(uuid())
   wallet_id      String   @map("wallet_id")
   type           String
-  amount         Float
-  balance_before Float    @map("balance_before")
-  balance_after  Float    @map("balance_after")
+  amount         Decimal
+  balance_before Decimal  @map("balance_before")
+  balance_after  Decimal  @map("balance_after")
   reference      String   @unique
   description    String
   created_at     DateTime @default(now()) @map("created_at")
@@ -67,7 +68,7 @@ model Transaction {
   network            String
   phone_number       String   @map("phone_number")
   plan_id            String?  @map("plan_id")
-  amount             Float
+  amount             Decimal
   provider_used      String   @map("provider_used")
   provider_reference String?  @map("provider_reference")
   status             String   @default("PENDING")

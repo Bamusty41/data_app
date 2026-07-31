@@ -1,30 +1,24 @@
 import { Provider } from '../../types/enums';
-import { IVTUProvider } from './vtuProvider.interface';
+import { IVtuProvider, VtuProviderResponse } from './IVtuProvider';
 import { InlomaxProvider } from './inlomaxProvider';
 import { HusmodataProvider } from './husmodataProvider';
 
-export class VTUServiceFactory {
-  private static providers: Map<Provider, IVTUProvider> = new Map<Provider, IVTUProvider>([
-    [Provider.INLOMAX, new InlomaxProvider()],
-    [Provider.HUSMODATA, new HusmodataProvider()],
-  ]);
+const providers = new Map<Provider, IVtuProvider>([
+  [Provider.INLOMAX, new InlomaxProvider()],
+  [Provider.HUSMODATA, new HusmodataProvider()],
+]);
 
-  /**
-   * Returns a specific provider instance by name.
-   */
-  static getProvider(name: Provider): IVTUProvider {
-    const provider = this.providers.get(name);
-    if (!provider) {
-      throw new Error(`Provider '${name}' is not supported`);
-    }
+export class VTUServiceFactory {
+  static getProvider(name: Provider): IVtuProvider {
+    const provider = providers.get(name);
+    if (!provider) throw new Error(`Unsupported provider: ${name}`);
     return provider;
   }
 
-  /**
-   * Returns the default provider or alternate provider for failover.
-   */
-  static getFallbackProvider(currentProvider: Provider): IVTUProvider {
-    const fallback = currentProvider === Provider.INLOMAX ? Provider.HUSMODATA : Provider.INLOMAX;
-    return this.getProvider(fallback);
+  static getFallbackProvider(current: Provider): IVtuProvider {
+    const fallbackName = current === Provider.INLOMAX ? Provider.HUSMODATA : Provider.INLOMAX;
+    return this.getProvider(fallbackName);
   }
 }
+
+export type VTUPurchaseResponse = VtuProviderResponse;

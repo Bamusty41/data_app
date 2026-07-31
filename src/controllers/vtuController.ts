@@ -1,8 +1,12 @@
 import { Request, Response } from 'express';
-import { TransactionService } from '../services/transactionService';
-import { ServiceType, Network, Provider } from '../types/enums';
+import { VtuService } from '../services/vtu/vtuService';
+import { ServiceType, Network } from '../types/enums';
 
 export class VTUController {
+  /**
+   * POST /api/v1/vtu/purchase
+   * Resilient purchase endpoint with Primary → Fallback → Refund pipeline.
+   */
   static async purchaseAirtimeOrData(req: Request, res: Response) {
     try {
       const {
@@ -14,8 +18,6 @@ export class VTUController {
         phoneNumber,
         planId,
         amount,
-        preferredProvider,
-        allowFailover,
       } = req.body;
 
       if (!userId || !transactionPin || !reference || !serviceType || !network || !phoneNumber || !amount) {
@@ -30,11 +32,7 @@ export class VTUController {
         return res.status(400).json({ error: 'Invalid network. Must be MTN, AIRTEL, GLO, or NINE_MOBILE' });
       }
 
-      if (preferredProvider && !Object.values(Provider).includes(preferredProvider)) {
-        return res.status(400).json({ error: 'Invalid provider. Must be INLOMAX or HUSMODATA' });
-      }
-
-      const result = await TransactionService.processTopUp({
+      const result = await VtuService.processPurchase({
         userId,
         transactionPin,
         reference,
@@ -43,8 +41,6 @@ export class VTUController {
         phoneNumber,
         planId,
         amount: Number(amount),
-        preferredProvider: preferredProvider as Provider | undefined,
-        allowFailover: allowFailover !== false,
       });
 
       const statusCode = result.success ? 200 : 400;
@@ -54,10 +50,29 @@ export class VTUController {
     }
   }
 
+  /**
+   * GET /api/v1/vtu/balances
+   * Fetches API wallet balances from all registered providers.
+   */
+  static async getProviderBalances(req: Request, res: Response) {
+    try {
+      const balances = await VtuService.checkProviderBalances();
+      return res.json({ data: balances });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * GET /api/v1/transactions/reference/:reference
+   */
   static async getTransaction(req: Request, res: Response) {
     try {
       const { reference } = req.params;
-      const transaction = await TransactionService.getTransactionByReference(reference);
+      const transaction = await (await import('../db/prisma')).default.transaction.findUnique({
+        where: { reference },
+        include: { user: { select: { id: true, full_name: true, email: true, phone: true } } },
+      });
       if (!transaction) {
         return res.status(404).json({ error: 'Transaction reference not found' });
       }
@@ -67,13 +82,21 @@ export class VTUController {
     }
   }
 
+  /**
+   * GET /api/v1/transactions/user/:userId
+   */
   static async getUserHistory(req: Request, res: Response) {
     try {
       const { userId } = req.params;
       const limit = Number(req.query.limit) || 50;
       const offset = Number(req.query.offset) || 0;
 
-      const history = await TransactionService.getUserTransactions(userId, limit, offset);
+      const history = await (await import('../db/prisma')).default.transaction.findMany({
+        where: { user_id: userId },
+        orderBy: { created_at: 'desc' },
+        take: limit,
+        skip: offset,
+      });
       return res.json({ data: history });
     } catch (error: any) {
       return res.status(400).json({ error: error.message });

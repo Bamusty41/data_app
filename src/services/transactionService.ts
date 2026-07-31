@@ -8,8 +8,7 @@ import {
 import prisma from '../db/prisma';
 import { UserService } from './userService';
 import { WalletService } from './walletService';
-import { VTUServiceFactory } from './vtu/vtuServiceFactory';
-import { VTUPurchaseResponse } from './vtu/vtuProvider.interface';
+import { VTUServiceFactory, VTUPurchaseResponse } from './vtu/vtuServiceFactory';
 
 export interface InitiateTopUpInput {
   userId: string;
@@ -105,9 +104,19 @@ export class TransactionService {
         const providerInstance = VTUServiceFactory.getProvider(currentProvider);
 
         if (serviceType === ServiceType.AIRTIME) {
-          providerResponse = await providerInstance.purchaseAirtime(requestPayload);
+          providerResponse = await providerInstance.purchaseAirtime(
+            network,
+            phoneNumber,
+            amount,
+            reference,
+          );
         } else {
-          providerResponse = await providerInstance.purchaseData(requestPayload);
+          providerResponse = await providerInstance.purchaseData(
+            network,
+            phoneNumber,
+            planId || '',
+            reference,
+          );
         }
 
         if (providerResponse.success) {
@@ -129,9 +138,19 @@ export class TransactionService {
         console.log(`[VTU Service] Failing over to provider: ${currentProvider}`);
 
         if (serviceType === ServiceType.AIRTIME) {
-          providerResponse = await fallbackProviderInstance.purchaseAirtime(requestPayload);
+          providerResponse = await fallbackProviderInstance.purchaseAirtime(
+            network,
+            phoneNumber,
+            amount,
+            reference,
+          );
         } else {
-          providerResponse = await fallbackProviderInstance.purchaseData(requestPayload);
+          providerResponse = await fallbackProviderInstance.purchaseData(
+            network,
+            phoneNumber,
+            planId || '',
+            reference,
+          );
         }
 
         if (providerResponse?.success) {
